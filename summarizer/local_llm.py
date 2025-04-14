@@ -102,27 +102,42 @@ class LocalLLM:
         try:
             logger.info("Generating summary with local LLM...")
             
-            # Prepare the command
-            cmd = [
-                "ollama", "run",
-                self.model,
-                prompt
-            ]
+            # Create a temporary file for the prompt
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as f:
+                f.write(prompt)
+                temp_file_path = f.name
             
-            # Run the command with timeout
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout
-            )
-            
-            if result.returncode != 0:
-                logger.error(f"LLM generation failed: {result.stderr}")
-                return None
+            try:
+                # Prepare the command
+                cmd = [
+                    "ollama", "run",
+                    self.model,
+                    f"$(cat {temp_file_path})"
+                ]
                 
-            return result.stdout
-            
+                logger.debug(f"Running command: {' '.join(cmd)}")
+                
+                # Run the command with timeout
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                    shell=True  # Enable shell to handle the $(cat) command
+                )
+                
+                if result.returncode != 0:
+                    logger.error(f"LLM generation failed: {result.stderr}")
+                    return None
+                    
+                logger.debug(f"LLM output: {result.stdout[:200]}...")  # Log first 200 chars
+                return result.stdout
+                
+            finally:
+                # Clean up the temporary file
+                os.unlink(temp_file_path)
+                
         except subprocess.TimeoutExpired:
             logger.error(f"LLM generation timed out after {self.timeout} seconds")
             return None
