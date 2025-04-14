@@ -16,7 +16,7 @@ class LocalLLM:
         load_dotenv()
         # Use the full model name including quantization suffix
         self.model = os.getenv("OLLAMA_MODEL", "jcai/breeze-7b-32k-instruct-v1_0:f16")
-        self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "10"))
+        self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "30"))
         # Add parameters for faster inference
         self.num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "2048"))  # Context window size
         self.num_thread = int(os.getenv("OLLAMA_NUM_THREAD", "4"))  # Number of threads
