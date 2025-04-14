@@ -16,7 +16,11 @@ class LocalLLM:
         load_dotenv()
         # Use the full model name including quantization suffix
         self.model = os.getenv("OLLAMA_MODEL", "jcai/breeze-7b-32k-instruct-v1_0:f16")
-        self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "300"))  # Default 5 minutes
+        self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "10"))
+        # Add parameters for faster inference
+        self.num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "2048"))  # Context window size
+        self.num_thread = int(os.getenv("OLLAMA_NUM_THREAD", "4"))  # Number of threads
+        self.num_gpu = int(os.getenv("OLLAMA_NUM_GPU", "1"))  # Number of GPU layers
         
     def _check_ollama_installed(self) -> bool:
         """
@@ -110,8 +114,14 @@ class LocalLLM:
                 temp_file_path = f.name
             
             try:
-                # Prepare the command
-                cmd = f"cat {temp_file_path} | ollama run {self.model}"
+                # Prepare the command with optimization parameters
+                cmd = (
+                    f"cat {temp_file_path} | "
+                    f"ollama run {self.model} "
+                    f"--num_ctx {self.num_ctx} "
+                    f"--num_thread {self.num_thread} "
+                    f"--num_gpu {self.num_gpu}"
+                )
                 
                 logger.debug(f"Running command: {cmd}")
                 
