@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 class LocalLLM:
     def __init__(self):
         load_dotenv()
+        # Use the full model name including quantization suffix
         self.model = os.getenv("OLLAMA_MODEL", "jcai/breeze-7b-32k-instruct-v1_0:f16")
         self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "300"))  # Default 5 minutes
         
@@ -110,13 +111,9 @@ class LocalLLM:
             
             try:
                 # Prepare the command
-                cmd = [
-                    "ollama", "run",
-                    self.model,
-                    f"$(cat {temp_file_path})"
-                ]
+                cmd = f"cat {temp_file_path} | ollama run {self.model}"
                 
-                logger.debug(f"Running command: {' '.join(cmd)}")
+                logger.debug(f"Running command: {cmd}")
                 
                 # Run the command with timeout
                 result = subprocess.run(
@@ -124,11 +121,15 @@ class LocalLLM:
                     capture_output=True,
                     text=True,
                     timeout=self.timeout,
-                    shell=True  # Enable shell to handle the $(cat) command
+                    shell=True
                 )
                 
                 if result.returncode != 0:
                     logger.error(f"LLM generation failed: {result.stderr}")
+                    return None
+                    
+                if not result.stdout.strip():
+                    logger.error("LLM returned empty output")
                     return None
                     
                 logger.debug(f"LLM output: {result.stdout[:200]}...")  # Log first 200 chars
