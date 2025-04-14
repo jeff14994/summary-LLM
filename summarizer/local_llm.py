@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 class LocalLLM:
     def __init__(self):
         load_dotenv()
-        self.model = os.getenv("OLLAMA_MODEL", "jcai/breeze-7b-32k-instruct-v1_0")
+        self.model = os.getenv("OLLAMA_MODEL", "jcai/breeze-7b-32k-instruct-v1_0:f16")
         self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "300"))  # Default 5 minutes
         
     def _check_ollama_installed(self) -> bool:
