@@ -116,11 +116,11 @@ class LocalLLM:
             try:
                 # Prepare the command with optimization parameters
                 cmd = (
+                    f"OLLAMA_NUM_CTX=1024 "
+                    f"OLLAMA_NUM_THREAD=8 "
+                    f"OLLAMA_NUM_GPU=1 "
                     f"cat {temp_file_path} | "
-                    f"ollama run {self.model} "
-                    f"--num_ctx {self.num_ctx} "
-                    f"--num_thread {self.num_thread} "
-                    f"--num_gpu {self.num_gpu}"
+                    f"ollama run {self.model}"
                 )
                 
                 logger.debug(f"Running command: {cmd}")
@@ -131,7 +131,8 @@ class LocalLLM:
                     capture_output=True,
                     text=True,
                     timeout=self.timeout,
-                    shell=True
+                    shell=True,
+                    env=dict(os.environ, OLLAMA_NUM_CTX="1024", OLLAMA_NUM_THREAD="8", OLLAMA_NUM_GPU="1")
                 )
                 
                 if result.returncode != 0:
