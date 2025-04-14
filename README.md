@@ -19,7 +19,7 @@ A Python-based system for summarizing HTML transcription content using local LLM
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/jeff14994/summary-LLM/blob/main/README.md
 cd summarizer_project
 ```
 
