@@ -42,7 +42,7 @@ ollama pull jcai/breeze-7b-32k-instruct-v1_0:f16
 
 1. Run the summarizer:
 ```bash
-python main.py --url "https://sayit.archive.tw/2025-02-02-bbc-採訪" --verbose
+python3 main.py --url "https://sayit.archive.tw/2025-02-02-bbc-採訪" --verbose
 ```
 
 2. For Docker usage:
