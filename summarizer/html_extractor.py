@@ -7,7 +7,7 @@ This module handles fetching and parsing HTML content from SayIt archive URLs.
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
-from typing import Optional
+from typing import Optional, List
 
 class HTMLExtractor:
     def __init__(self):
@@ -34,6 +34,39 @@ class HTMLExtractor:
             logger.error(f"Failed to fetch content from {url}: {str(e)}")
             return None
 
+    def _extract_speech_content(self, speech_wrapper: BeautifulSoup) -> Optional[str]:
+        """
+        Extract content from a single speech wrapper div.
+        
+        Args:
+            speech_wrapper (BeautifulSoup): The speech wrapper div element
+            
+        Returns:
+            Optional[str]: The extracted speech content if successful, None otherwise
+        """
+        try:
+            # Extract speaker name
+            speaker_elem = speech_wrapper.find('span', class_='speech__meta-data__speaker-name')
+            speaker = speaker_elem.get_text(strip=True) if speaker_elem else "Unknown Speaker"
+            
+            # Extract speech content
+            content_elem = speech_wrapper.find('div', class_='speech__content')
+            if not content_elem:
+                return None
+                
+            # Get all paragraphs
+            paragraphs = content_elem.find_all('p')
+            if not paragraphs:
+                return None
+                
+            # Combine speaker and content
+            content = "\n".join([f"{speaker}: {p.get_text(strip=True)}" for p in paragraphs])
+            return content
+            
+        except Exception as e:
+            logger.error(f"Failed to extract speech content: {str(e)}")
+            return None
+
     def extract_transcription(self, html_content: str) -> Optional[str]:
         """
         Extract transcription text from HTML content.
@@ -47,19 +80,26 @@ class HTMLExtractor:
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            # Remove unwanted elements
-            for element in soup.find_all(['script', 'style', 'nav', 'footer']):
-                element.decompose()
-            
-            # Extract main content
-            main_content = soup.find('main') or soup.find('article') or soup.find('div', class_='content')
-            if not main_content:
-                logger.warning("No main content found in the HTML")
+            # Find all speech wrappers
+            speech_wrappers = soup.find_all('div', class_='speech-wrapper')
+            if not speech_wrappers:
+                logger.warning("No speech content found in the HTML")
                 return None
                 
-            # Clean and format text
-            text = main_content.get_text(separator='\n', strip=True)
-            return text
+            # Extract content from each speech wrapper
+            speeches = []
+            for wrapper in speech_wrappers:
+                speech_content = self._extract_speech_content(wrapper)
+                if speech_content:
+                    speeches.append(speech_content)
+                    
+            if not speeches:
+                logger.warning("No valid speech content found")
+                return None
+                
+            # Combine all speeches
+            return "\n\n".join(speeches)
+            
         except Exception as e:
             logger.error(f"Failed to extract transcription: {str(e)}")
             return None
