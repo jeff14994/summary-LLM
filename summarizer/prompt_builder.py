@@ -6,6 +6,7 @@ This module handles constructing effective prompts for the LLM to generate summa
 
 from typing import List, Dict, Any
 from loguru import logger
+import re
 
 class PromptBuilder:
     def __init__(self):
@@ -120,57 +121,35 @@ I will generate a structured summary of the meeting:
                 "action_items": []
             }
             
-            # Detect language of the response
-            lang = self._detect_language(response)
-            
             # Split the response into lines and clean them
             lines = [line.strip() for line in response.split('\n') if line.strip()]
             
-            current_section = None
+            # Find the start of the actual summary points (after the empty line)
+            summary_start = 0
+            for i, line in enumerate(lines):
+                if line == "3.":  # This marks the end of the Chinese section
+                    summary_start = i + 2  # Skip the empty line after "3."
+                    break
             
-            # Define section headers based on language
-            if lang == "en":
-                summary_headers = ["summary:"]
-                conclusion_headers = ["conclusion:"]
-                action_headers = ["action items:"]
-            else:
-                summary_headers = ["摘要要點", "要點"]
-                conclusion_headers = ["結論"]
-                action_headers = ["行動項目", "行動"]
-            
-            for line in lines:
+            # Extract summary points from the numbered list
+            for line in lines[summary_start:]:
                 line = line.strip()
                 if not line:
                     continue
-                    
-                # Check for section headers based on detected language
-                if any(header in line.lower() for header in summary_headers):
-                    current_section = "summary"
-                    continue
-                elif any(header in line.lower() for header in conclusion_headers):
-                    current_section = "conclusion"
-                    continue
-                elif any(header in line.lower() for header in action_headers):
-                    current_section = "action_items"
-                    continue
                 
                 # Skip lines that are clearly not content
-                if line.startswith(("=== Model", "You are", "Please", "IMPORTANT")):
+                if line.startswith(("=== Model", "You are", "Please", "IMPORTANT", "Breeze")):
                     continue
                 
-                # Add content to appropriate section
-                if current_section == "summary":
-                    if line.startswith(("*", "-", "•", "1.", "2.", "3.")):
-                        summary["summary"].append(line.lstrip("*•-123. "))
-                elif current_section == "conclusion":
-                    if not summary["conclusion"]:  # Only take the first conclusion line
-                        summary["conclusion"] = line
-                elif current_section == "action_items":
-                    if line.startswith(("*", "-", "•", "1.", "2.", "3.")):
-                        summary["action_items"].append(line.lstrip("*•-123. "))
+                # Check if this is a summary point
+                if line.startswith(("1.", "2.", "3.", "4.", "5.")):
+                    # Clean the line and add it as a summary point
+                    cleaned_line = re.sub(r'^\d+\.\s*', '', line)  # Remove numbering
+                    if cleaned_line:
+                        summary["summary"].append(cleaned_line)
             
-            # If no conclusion was found, use the last summary point
-            if not summary["conclusion"] and summary["summary"]:
+            # If we have summary points, use the last one as conclusion
+            if summary["summary"]:
                 summary["conclusion"] = summary["summary"][-1]
             
             return summary
