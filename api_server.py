@@ -74,43 +74,33 @@ async def summarize(request: SummarizeRequest):
         logs = []
         
         # Initialize LLM
-        # logger.info("Initializing LLM...")
-        # if not llm.initialize():
-        #     raise HTTPException(status_code=500, detail="Failed to initialize LLM")
-        # logs.append("LLM initialized successfully")
+        logger.info("Initializing LLM...")
+        if not llm.initialize():
+            raise HTTPException(status_code=500, detail="Failed to initialize LLM")
+        logs.append("LLM initialized successfully")
         
         # Extract transcription
-        # logger.info(f"Fetching transcription from {request.url}...")
-        # transcription = html_extractor.process_url(str(request.url))
-        # if not transcription:
-        #     raise HTTPException(status_code=400, detail="Failed to extract transcription")
-        # logger.debug(f"Extracted transcription: {transcription[:200]}...")  # Show first 200 chars
-        # logs.append("Transcription extracted successfully")
+        logger.info(f"Fetching transcription from {request.url}...")
+        transcription = html_extractor.process_url(str(request.url))
+        if not transcription:
+            raise HTTPException(status_code=400, detail="Failed to extract transcription")
+        logger.debug(f"Extracted transcription: {transcription[:200]}...")  # Show first 200 chars
+        logs.append("Transcription extracted successfully")
         
         # Build prompt
-        # logger.info("Building prompt...")
-        # prompt = prompt_builder.build_prompt(transcription)
-        # logger.debug(f"Built prompt: {prompt[:200]}...")  # Show first 200 chars
-        # logs.append("Prompt built successfully")
+        logger.info("Building prompt...")
+        prompt = prompt_builder.build_prompt(transcription)
+        logger.debug(f"Built prompt: {prompt[:200]}...")  # Show first 200 chars
+        logs.append("Prompt built successfully")
         
         # Generate summary
-        # logger.info("Generating summary...")
-        # raw_summary = llm.generate_summary(prompt)
-        # if not raw_summary:
-        #     raise HTTPException(status_code=500, detail="Failed to generate summary")
-        # logger.debug(f"Raw summary: {raw_summary}")
-        # logs.append("Summary generated successfully")
+        logger.info("Generating summary...")
+        raw_summary = llm.generate_summary(prompt)
+        if not raw_summary:
+            raise HTTPException(status_code=500, detail="Failed to generate summary")
+        logger.debug(f"Raw summary: {raw_summary}")
+        logs.append("Summary generated successfully")
         
-        raw_summary = """=== Model Output ===
-Breeze 是個台湾联发科 AI 助手。你最想做 Taiwanese 立場，用正体中文回答問嘅。
-1. 摘要要點：列表 3-5 個最重要嘅討嚟點
-2. 結論：簡要總结會議嘅主要結論
-3.
-
-1. DeepSeek's recent events have sparked widespread discussion about privacy, rights, and open-source development.
-2. The conversation should focus on how open-source methods can balance the promotion of human rights while minimizing potential risks like fraud and deepfakes.
-3. The assistant discusses different AI models like Perplexity R1, O3 Mini High, and Gemini Thinking as alternatives to DeepSeek.
-4. It is suggested that focusing on common anti-malicious tools or developing new open-source methods may be a way forward in balancing the benefits and risks of open-source development."""
         # Parse and validate summary
         logger.info("Parsing summary...")
         summary = prompt_builder.parse_llm_response(raw_summary)
