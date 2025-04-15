@@ -14,6 +14,7 @@ import time
 import sys
 from datetime import datetime
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class LocalLLM:
     def __init__(self):
@@ -22,8 +23,8 @@ class LocalLLM:
         self.model = os.getenv("OLLAMA_MODEL", "jcai/breeze-7b-32k-instruct-v1_0:q4_0")
         self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "0"))  # 0 means no timeout
         # Add parameters for faster inference
-        self.num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "2048"))  # Context window size
-        self.num_thread = int(os.getenv("OLLAMA_NUM_THREAD", "4"))  # Number of threads
+        self.num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "1024"))  # Reduced context window
+        self.num_thread = int(os.getenv("OLLAMA_NUM_THREAD", "8"))  # Increased threads
         self.num_gpu = int(os.getenv("OLLAMA_NUM_GPU", "1"))  # Number of GPU layers
         # Create output directory
         self.output_dir = "llm_outputs"
@@ -32,8 +33,10 @@ class LocalLLM:
         self.current_process = None
         self.is_running = False
         # Chunking parameters
-        self.max_chunk_size = int(os.getenv("MAX_CHUNK_SIZE", "1000"))  # Maximum characters per chunk
-        self.chunk_overlap = int(os.getenv("CHUNK_OVERLAP", "200"))  # Overlap between chunks
+        self.max_chunk_size = int(os.getenv("MAX_CHUNK_SIZE", "500"))  # Reduced chunk size
+        self.chunk_overlap = int(os.getenv("CHUNK_OVERLAP", "100"))  # Reduced overlap
+        # Parallel processing
+        self.max_workers = int(os.getenv("MAX_WORKERS", "4"))  # Number of parallel workers
         
     def _check_ollama_installed(self) -> bool:
         """
@@ -191,25 +194,25 @@ class LocalLLM:
             
         return chunks
         
-    def _process_chunk(self, chunk: str, is_first: bool = False, is_last: bool = False) -> str:
+    def _process_chunk_parallel(self, chunk_info: tuple) -> tuple:
         """
-        Process a single chunk of text.
+        Process a single chunk of text in parallel.
         
         Args:
-            chunk (str): The text chunk to process
-            is_first (bool): Whether this is the first chunk
-            is_last (bool): Whether this is the last chunk
+            chunk_info: Tuple of (chunk_index, chunk, is_first, is_last)
             
         Returns:
-            str: The processed chunk
+            tuple: (chunk_index, summary)
         """
+        chunk_index, chunk, is_first, is_last = chunk_info
         prompt = f"""You are a helpful AI assistant. Please process the following text{' (this is the first part)' if is_first else (' (this is the last part)' if is_last else '')}:
 
 {chunk}
 
 Please provide a concise summary of this section. Focus on the key points and main ideas."""
         
-        return self._generate_with_prompt(prompt)
+        summary = self._generate_with_prompt(prompt)
+        return (chunk_index, summary)
         
     def _generate_with_prompt(self, prompt: str) -> Optional[str]:
         """
@@ -239,7 +242,7 @@ Please provide a concise summary of this section. Focus on the key points and ma
                 )
                 
                 # Start the process
-                self.current_process = subprocess.Popen(
+                process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
@@ -250,12 +253,11 @@ Please provide a concise summary of this section. Focus on the key points and ma
                             OLLAMA_NUM_THREAD=str(self.num_thread),
                             OLLAMA_NUM_GPU=str(self.num_gpu))
                 )
-                self.is_running = True
                 
                 # Get the output
-                stdout, stderr = self.current_process.communicate()
+                stdout, stderr = process.communicate()
                 
-                if self.current_process.returncode != 0:
+                if process.returncode != 0:
                     logger.error(f"Chunk processing failed: {stderr}")
                     return None
                 
@@ -264,8 +266,6 @@ Please provide a concise summary of this section. Focus on the key points and ma
             finally:
                 # Clean up the temporary file
                 os.unlink(temp_file_path)
-                self.is_running = False
-                self.current_process = None
                 
         except Exception as e:
             logger.error(f"Failed to process chunk: {str(e)}")
@@ -294,22 +294,28 @@ Please provide a concise summary of this section. Focus on the key points and ma
             chunks = self._split_into_chunks(prompt)
             logger.info(f"Split text into {len(chunks)} chunks")
             
-            # Process each chunk
-            summaries = []
-            total_chunks = len(chunks)
+            # Prepare chunk information for parallel processing
+            chunk_info = [
+                (i, chunk, i == 0, i == len(chunks) - 1)
+                for i, chunk in enumerate(chunks)
+            ]
             
-            for i, chunk in enumerate(chunks):
-                logger.info(f"Processing chunk {i+1}/{total_chunks}")
-                summary = self._process_chunk(
-                    chunk,
-                    is_first=(i == 0),
-                    is_last=(i == total_chunks - 1)
-                )
-                if summary:
-                    summaries.append(summary)
-                else:
-                    logger.error(f"Failed to process chunk {i+1}")
-                    return None
+            # Process chunks in parallel
+            summaries = [None] * len(chunks)
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                future_to_chunk = {
+                    executor.submit(self._process_chunk_parallel, info): info[0]
+                    for info in chunk_info
+                }
+                
+                for future in as_completed(future_to_chunk):
+                    chunk_index, summary = future.result()
+                    if summary:
+                        summaries[chunk_index] = summary
+                        logger.info(f"Completed chunk {chunk_index + 1}/{len(chunks)}")
+                    else:
+                        logger.error(f"Failed to process chunk {chunk_index + 1}")
+                        return None
             
             # Combine summaries
             final_summary = "\n\n".join(summaries)
