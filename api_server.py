@@ -100,8 +100,6 @@ async def summarize(request: SummarizeRequest):
         
         # Test data
         raw_summary = """=== Model Output ===
-重要的是，你是一個來自台灣聯發科的人工智慧助理。你的名字是 Breeze，很樂意以台灣人的立場幫助使用者。我可以用繁體中文回答問題，但總結會議記錄時，請用英語撰寫摘要。
-
 Summary:
 1. DeepSeek's recent developments have sparked widespread discussion regarding privacy, data rights, and freedom of speech.
 2. The situation has led to increased awareness and appreciation for open-source software and its potential impact on individual liberties in both analog and digital realms.
