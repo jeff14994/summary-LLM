@@ -114,10 +114,11 @@ Summary:
             logger.error(f"Invalid summary format: {summary}")
             raise HTTPException(status_code=500, detail="Invalid summary format")
         logs.append("Summary parsed and validated successfully")
-        
+        print(summary)
         # Format and save summary
         logger.info("Saving summary...")
         formatted_summary = output_formatter.format_summary(summary, str(request.url))
+        print(formatted_summary)
         output_path = output_formatter.save_summary(formatted_summary)
         logs.append(f"Summary saved to {output_path}")
         
