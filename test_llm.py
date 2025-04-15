@@ -3,6 +3,7 @@ from loguru import logger
 import sys
 import time
 from datetime import datetime
+import os
 
 # Configure logger
 logger.remove()
@@ -18,6 +19,14 @@ def print_progress(start_time: float, timeout: int, output_lines: int = 0, statu
     sys.stdout.flush()
 
 def test_llm():
+    # Create output directory if it doesn't exist
+    output_dir = "llm_outputs"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Generate timestamp for filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = os.path.join(output_dir, f"llm_output_{timestamp}.txt")
+    
     # Initialize the LLM
     llm = LocalLLM()
     
@@ -40,6 +49,7 @@ Please keep your response concise and to the point."""
     logger.info(f"Context window: {llm.num_ctx}")
     logger.info(f"Threads: {llm.num_thread}")
     logger.info(f"GPU layers: {llm.num_gpu}")
+    logger.info(f"Output will be saved to: {output_file}")
     
     start_time = time.time()
     last_update = time.time()
@@ -61,7 +71,27 @@ Please keep your response concise and to the point."""
     print()  # New line after progress bar
     
     if summary:
-        logger.info("Test successful! Here's the summary:")
+        # Write output to file
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write("=== Model Configuration ===\n")
+            f.write(f"Model: {llm.model}\n")
+            f.write(f"Timeout: {llm.timeout} seconds\n")
+            f.write(f"Context window: {llm.num_ctx}\n")
+            f.write(f"Threads: {llm.num_thread}\n")
+            f.write(f"GPU layers: {llm.num_gpu}\n\n")
+            
+            f.write("=== Test Prompt ===\n")
+            f.write(test_prompt)
+            f.write("\n\n")
+            
+            f.write("=== Model Output ===\n")
+            f.write(summary)
+        
+        logger.info("Test successful! Summary saved to file.")
+        logger.info(f"Output file: {output_file}")
+        
+        # Also print summary to console
+        logger.info("Here's the summary:")
         logger.info("=" * 80)
         logger.info(summary)
         logger.info("=" * 80)
