@@ -8,6 +8,7 @@ A Python-based system for summarizing HTML transcription content using local LLM
 - Uses Ollama with Breeze/Qwen models for local inference
 - Generates structured JSON summaries
 - Dockerized for easy deployment
+- **REST API server for backend integration**
 
 ## Prerequisites
 
@@ -40,6 +41,8 @@ ollama pull jcai/breeze-7b-32k-instruct-v1_0:f16
 
 ## Usage
 
+### Command Line Interface
+
 1. Run the summarizer:
 ```bash
 python3 main.py --url "https://sayit.archive.tw/2025-02-02-bbc-採訪" --verbose
@@ -51,6 +54,31 @@ docker build -t summarizer .
 docker run summarizer --url "https://sayit.archive.tw/2025-02-02-bbc-採訪"
 ```
 
+### API Server
+
+1. Start the API server:
+```bash
+python api_server.py
+```
+
+2. The server will be available at `http://localhost:8000`
+
+3. Make API requests:
+```bash
+curl -X POST "http://localhost:8000/summarize" \
+     -H "Content-Type: application/json" \
+     -d '{"url": "https://sayit.archive.tw/2025-02-02-bbc-採訪", "verbose": true}'
+```
+
+4. API Documentation:
+   - Swagger UI: `http://localhost:8000/docs`
+   - ReDoc: `http://localhost:8000/redoc`
+
+5. Health Check:
+```bash
+curl "http://localhost:8000/health"
+```
+
 ## Project Structure
 
 ```
@@ -59,6 +87,7 @@ summarizer_project/
 ├── requirements.txt
 ├── Dockerfile
 ├── main.py
+├── api_server.py
 ├── summarizer/
 │   ├── __init__.py
 │   ├── html_extractor.py
@@ -75,6 +104,12 @@ Create a `.env` file in the project root with the following variables:
 ```
 OLLAMA_MODEL=jcai/breeze-7b-32k-instruct-v1_0
 OUTPUT_DIR=./output
+OLLAMA_TIMEOUT=30
+OLLAMA_NUM_CTX=1024
+OLLAMA_NUM_THREAD=8
+MAX_CHUNK_SIZE=500
+CHUNK_OVERLAP=100
+MAX_WORKERS=4
 ```
 
 ## License
