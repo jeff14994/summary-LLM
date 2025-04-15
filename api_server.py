@@ -74,49 +74,47 @@ async def summarize(request: SummarizeRequest):
         logs = []
         
         # Initialize LLM
-        # logger.info("Initializing LLM...")
-        # if not llm.initialize():
-        #     raise HTTPException(status_code=500, detail="Failed to initialize LLM")
-        # logs.append("LLM initialized successfully")
+        logger.info("Initializing LLM...")
+        if not llm.initialize():
+            raise HTTPException(status_code=500, detail="Failed to initialize LLM")
+        logs.append("LLM initialized successfully")
         
         # Extract transcription
-        # logger.info(f"Fetching transcription from {request.url}...")
-        # transcription = html_extractor.process_url(str(request.url))
-        # if not transcription:
-        #     raise HTTPException(status_code=400, detail="Failed to extract transcription")
-        # logs.append("Transcription extracted successfully")
+        logger.info(f"Fetching transcription from {request.url}...")
+        transcription = html_extractor.process_url(str(request.url))
+        if not transcription:
+            raise HTTPException(status_code=400, detail="Failed to extract transcription")
+        logger.debug(f"Extracted transcription: {transcription[:200]}...")  # Show first 200 chars
+        logs.append("Transcription extracted successfully")
         
         # Build prompt
-        # logger.info("Building prompt...")
-        # prompt = prompt_builder.build_prompt(transcription)
-        # logs.append("Prompt built successfully")
+        logger.info("Building prompt...")
+        prompt = prompt_builder.build_prompt(transcription)
+        logger.debug(f"Built prompt: {prompt[:200]}...")  # Show first 200 chars
+        logs.append("Prompt built successfully")
         
         # Generate summary
-        # logger.info("Generating summary...")
-        # raw_summary = llm.generate_summary(prompt)
-        # if not raw_summary:
-        #     raise HTTPException(status_code=500, detail="Failed to generate summary")
-        # logs.append("Summary generated successfully")
-        
-        # Test data
-        raw_summary = """=== Model Output ===
-Summary:
-1. DeepSeek's recent developments have sparked widespread discussion regarding privacy, data rights, and freedom of speech.
-2. The situation has led to increased awareness and appreciation for open-source software and its potential impact on individual liberties in both analog and digital realms.
-3. The ongoing debate aims to explore how open-source technologies can be designed or adapted to better protect user rights while minimizing potential risks, such as fraud and deepfakes."""
+        logger.info("Generating summary...")
+        raw_summary = llm.generate_summary(prompt)
+        if not raw_summary:
+            raise HTTPException(status_code=500, detail="Failed to generate summary")
+        logger.debug(f"Raw summary: {raw_summary}")
+        logs.append("Summary generated successfully")
         
         # Parse and validate summary
         logger.info("Parsing summary...")
         summary = prompt_builder.parse_llm_response(raw_summary)
-        if not output_formatter.validate_summary(raw_summary):
+        logger.debug(f"Parsed summary: {summary}")
+        
+        if not output_formatter.validate_summary(summary):  # Changed to validate parsed summary
             logger.error(f"Invalid summary format: {summary}")
             raise HTTPException(status_code=500, detail="Invalid summary format")
         logs.append("Summary parsed and validated successfully")
-        print(summary)
+        
         # Format and save summary
         logger.info("Saving summary...")
         formatted_summary = output_formatter.format_summary(summary, str(request.url))
-        print(formatted_summary)
+        logger.debug(f"Formatted summary: {formatted_summary}")
         output_path = output_formatter.save_summary(formatted_summary)
         logs.append(f"Summary saved to {output_path}")
         
