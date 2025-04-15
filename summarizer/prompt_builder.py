@@ -62,9 +62,6 @@ class PromptBuilder:
             Dict[str, Any]: Structured summary containing key points, conclusion, and action items
         """
         try:
-            # Split the response into sections
-            sections = response.split('\n\n')
-            
             # Initialize the summary structure
             summary = {
                 "summary": [],
@@ -72,33 +69,45 @@ class PromptBuilder:
                 "action_items": []
             }
             
+            # Split the response into lines and clean them
+            lines = [line.strip() for line in response.split('\n') if line.strip()]
+            
             current_section = None
             
-            for line in sections:
+            for line in lines:
                 line = line.strip()
                 if not line:
                     continue
                     
-                # Check for section headers
-                if "摘要要點" in line or "要點" in line:
+                # Check for section headers in both English and Chinese
+                if any(header in line.lower() for header in ["summary:", "摘要要點", "要點"]):
                     current_section = "summary"
                     continue
-                elif "結論" in line:
+                elif any(header in line.lower() for header in ["conclusion:", "結論"]):
                     current_section = "conclusion"
                     continue
-                elif "行動項目" in line or "行動" in line:
+                elif any(header in line.lower() for header in ["action items:", "行動項目", "行動"]):
                     current_section = "action_items"
+                    continue
+                
+                # Skip lines that are clearly not content
+                if line.startswith(("=== Model", "You are", "Please", "IMPORTANT")):
                     continue
                 
                 # Add content to appropriate section
                 if current_section == "summary":
-                    if line.startswith(("-", "•", "1.", "2.", "3.")):
-                        summary["summary"].append(line.lstrip("-•123. "))
+                    if line.startswith(("*", "-", "•", "1.", "2.", "3.")):
+                        summary["summary"].append(line.lstrip("*•-123. "))
                 elif current_section == "conclusion":
-                    summary["conclusion"] = line
+                    if not summary["conclusion"]:  # Only take the first conclusion line
+                        summary["conclusion"] = line
                 elif current_section == "action_items":
-                    if line.startswith(("-", "•", "1.", "2.", "3.")):
-                        summary["action_items"].append(line.lstrip("-•123. "))
+                    if line.startswith(("*", "-", "•", "1.", "2.", "3.")):
+                        summary["action_items"].append(line.lstrip("*•-123. "))
+            
+            # If no conclusion was found, use the last summary point
+            if not summary["conclusion"] and summary["summary"]:
+                summary["conclusion"] = summary["summary"][-1]
             
             return summary
             
