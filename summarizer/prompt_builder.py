@@ -21,7 +21,8 @@ Please ensure the summary:
 - Maintains objectivity
 - Highlights key decisions and action items
 - Uses clear and concise language
-- Preserves the accuracy of the original content""",
+- Preserves the accuracy of the original content
+- Output in English""",
             
             "zh": """你是一個專業的會議記錄摘要生成助手。你的任務是根據提供的會議記錄內容，生成結構化的摘要。
 請遵循以下格式生成摘要：
@@ -33,7 +34,8 @@ Please ensure the summary:
 - 保持客觀中立
 - 突出關鍵決策和行動項目
 - 使用清晰簡潔的語言
-- 保持原始內容的準確性"""
+- 保持原始內容的準確性
+- 輸出為中文"""
         }
         
     def _detect_language(self, text: str) -> str:
