@@ -102,7 +102,7 @@ summarizer_project/
 
 Create a `.env` file in the project root with the following variables:
 ```
-OLLAMA_MODEL=jcai/breeze-7b-32k-instruct-v1_0
+OLLAMA_MODEL=jcai/breeze-7b-32k-instruct-v1_0:q4_0
 OUTPUT_DIR=./output
 OLLAMA_TIMEOUT=30
 OLLAMA_NUM_CTX=1024
