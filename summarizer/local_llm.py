@@ -97,13 +97,13 @@ class LocalLLM:
                 
         return True
         
-    def _print_progress(self, start_time: float, timeout: int, output_lines: int = 0):
+    def _print_progress(self, start_time: float, timeout: int, output_lines: int = 0, status: str = "Running"):
         """Print a progress indicator for the inference process."""
         elapsed = time.time() - start_time
         progress = min(100, int((elapsed / timeout) * 100))
         elapsed_str = datetime.fromtimestamp(elapsed).strftime('%M:%S')
-        status = f"Model: {self.model} | Time: {elapsed_str} | Output: {output_lines} lines | Progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}"
-        sys.stdout.write(f"\r{status}")
+        status_line = f"Model: {self.model} | Status: {status} | Time: {elapsed_str} | Output: {output_lines} lines | Progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}"
+        sys.stdout.write(f"\r{status_line}")
         sys.stdout.flush()
         
     def generate_summary(self, prompt: str) -> Optional[str]:
@@ -155,6 +155,8 @@ class LocalLLM:
                 output = []
                 last_update = time.time()
                 update_interval = 0.5  # Update progress every 0.5 seconds
+                last_output_time = time.time()
+                stuck_threshold = 10  # Consider process stuck if no output for 10 seconds
                 
                 while True:
                     # Check if process is still running
@@ -164,7 +166,10 @@ class LocalLLM:
                     # Update progress display at regular intervals
                     current_time = time.time()
                     if current_time - last_update >= update_interval:
-                        self._print_progress(start_time, self.timeout, len(output))
+                        status = "Running"
+                        if current_time - last_output_time > stuck_threshold:
+                            status = "Waiting for response..."
+                        self._print_progress(start_time, self.timeout, len(output), status)
                         last_update = current_time
                     
                     # Check for timeout
@@ -177,7 +182,13 @@ class LocalLLM:
                     line = process.stdout.readline()
                     if line:
                         output.append(line)
+                        last_output_time = time.time()
                         logger.debug(f"Model output: {line.strip()}")
+                    
+                    # Check for errors in stderr
+                    error_line = process.stderr.readline()
+                    if error_line:
+                        logger.error(f"Model error: {error_line.strip()}")
                     
                     time.sleep(0.1)  # Small delay to prevent high CPU usage
                 
