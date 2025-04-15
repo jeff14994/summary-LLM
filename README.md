@@ -58,7 +58,7 @@ docker run summarizer --url "https://sayit.archive.tw/2025-02-02-bbc-採訪"
 
 1. Start the API server:
 ```bash
-python api_server.py
+python3 api_server.py
 ```
 
 2. The server will be available at `http://localhost:8000`

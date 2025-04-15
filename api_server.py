@@ -102,6 +102,7 @@ async def summarize(request: SummarizeRequest):
         logger.info("Parsing summary...")
         summary = prompt_builder.parse_llm_response(raw_summary)
         if not output_formatter.validate_summary(summary):
+            logger.error(f"Invalid summary format: {summary}")
             raise HTTPException(status_code=500, detail="Invalid summary format")
         logs.append("Summary parsed and validated successfully")
         
@@ -110,6 +111,9 @@ async def summarize(request: SummarizeRequest):
         formatted_summary = output_formatter.format_summary(summary, str(request.url))
         output_path = output_formatter.save_summary(formatted_summary)
         logs.append(f"Summary saved to {output_path}")
+        
+        # Log the final summary for debugging
+        logger.debug(f"Final summary: {formatted_summary}")
         
         return SummarizeResponse(
             summary=formatted_summary,
