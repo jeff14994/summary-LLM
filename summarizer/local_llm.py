@@ -12,6 +12,7 @@ import os
 from dotenv import load_dotenv
 import time
 import sys
+from datetime import datetime
 
 class LocalLLM:
     def __init__(self):
@@ -96,11 +97,13 @@ class LocalLLM:
                 
         return True
         
-    def _print_progress(self, start_time: float, timeout: int):
+    def _print_progress(self, start_time: float, timeout: int, output_lines: int = 0):
         """Print a progress indicator for the inference process."""
         elapsed = time.time() - start_time
         progress = min(100, int((elapsed / timeout) * 100))
-        sys.stdout.write(f"\rInference progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}")
+        elapsed_str = datetime.fromtimestamp(elapsed).strftime('%M:%S')
+        status = f"Model: {self.model} | Time: {elapsed_str} | Output: {output_lines} lines | Progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}"
+        sys.stdout.write(f"\r{status}")
         sys.stdout.flush()
         
     def generate_summary(self, prompt: str) -> Optional[str]:
@@ -126,9 +129,9 @@ class LocalLLM:
             try:
                 # Prepare the command with optimization parameters
                 cmd = (
-                    f"OLLAMA_NUM_CTX=1024 "
-                    f"OLLAMA_NUM_THREAD=8 "
-                    f"OLLAMA_NUM_GPU=1 "
+                    f"OLLAMA_NUM_CTX={self.num_ctx} "
+                    f"OLLAMA_NUM_THREAD={self.num_thread} "
+                    f"OLLAMA_NUM_GPU={self.num_gpu} "
                     f"cat {temp_file_path} | "
                     f"ollama run {self.model}"
                 )
@@ -142,18 +145,27 @@ class LocalLLM:
                     stderr=subprocess.PIPE,
                     text=True,
                     shell=True,
-                    env=dict(os.environ, OLLAMA_NUM_CTX="1024", OLLAMA_NUM_THREAD="8", OLLAMA_NUM_GPU="1")
+                    env=dict(os.environ, 
+                            OLLAMA_NUM_CTX=str(self.num_ctx),
+                            OLLAMA_NUM_THREAD=str(self.num_thread),
+                            OLLAMA_NUM_GPU=str(self.num_gpu))
                 )
                 
                 # Monitor the process and show progress
                 output = []
+                last_update = time.time()
+                update_interval = 0.5  # Update progress every 0.5 seconds
+                
                 while True:
                     # Check if process is still running
                     if process.poll() is not None:
                         break
                     
-                    # Print progress
-                    self._print_progress(start_time, self.timeout)
+                    # Update progress display at regular intervals
+                    current_time = time.time()
+                    if current_time - last_update >= update_interval:
+                        self._print_progress(start_time, self.timeout, len(output))
+                        last_update = current_time
                     
                     # Check for timeout
                     if time.time() - start_time > self.timeout:
