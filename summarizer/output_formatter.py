@@ -65,7 +65,7 @@ class OutputFormatter:
             logger.error(f"Failed to save summary: {str(e)}")
             raise
             
-def validate_summary(self, summary: Dict[str, Any]) -> bool:
+    def validate_summary(self, summary: Dict[str, Any]) -> bool:
         """
         Validate the summary structure.
         
@@ -93,7 +93,7 @@ def validate_summary(self, summary: Dict[str, Any]) -> bool:
             logger.error("Action items must be a list")
             return False
             
-        return True 
+        return True
 
     def parse_summary(self, summary_text: str) -> Dict[str, Any]:
         """
