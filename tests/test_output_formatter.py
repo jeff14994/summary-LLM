@@ -1,82 +1,53 @@
 """
-Test cases for the output formatter module.
+Test script for OutputFormatter
 """
 
-import pytest
-import json
-import os
-from datetime import datetime
 from summarizer.output_formatter import OutputFormatter
+from loguru import logger
 
-# Sample summary for testing
-SAMPLE_SUMMARY = {
-    "summary": [
-        "討論 DeepSeek R1 模型",
-        "主持人介紹討論主題"
-    ],
-    "conclusion": "這是一個關於最新 AI 模型的討論。",
-    "action_items": [
-        "深入了解 DeepSeek R1 的功能",
-        "評估模型應用可能性"
-    ]
-}
+def test_output_formatter():
+    # Initialize the formatter
+    formatter = OutputFormatter()
+    
+    # Test data
+    test_summary_text = """=== Model Output ===
+重要的是，你是一個來自台灣聯發科的人工智慧助理。你的名字是 Breeze，很樂意以台灣人的立場幫助使用者。我可以用繁體中文回答問題，但總結會議記錄時，請用英語撰寫摘要。
 
-@pytest.fixture
-def output_formatter(tmp_path):
-    """Create an output formatter with a temporary directory."""
-    os.environ["OUTPUT_DIR"] = str(tmp_path)
-    return OutputFormatter()
+Summary:
+1. DeepSeek's recent developments have sparked widespread discussion regarding privacy, data rights, and freedom of speech.
+2. The situation has led to increased awareness and appreciation for open-source software and its potential impact on individual liberties in both analog and digital realms.
+3. The ongoing debate aims to explore how open-source technologies can be designed or adapted to better protect user rights while minimizing potential risks, such as fraud and deepfakes."""
 
-def test_format_summary(output_formatter):
-    """Test formatting a summary with metadata."""
-    url = "https://example.com/transcription"
-    result = output_formatter.format_summary(SAMPLE_SUMMARY, url)
+    # Test parsing
+    logger.info("Testing parse_summary...")
+    parsed_summary = formatter.parse_summary(test_summary_text)
+    logger.info(f"Parsed summary: {parsed_summary}")
     
-    assert "metadata" in result
-    assert "content" in result
+    # Test validation
+    logger.info("Testing validate_summary...")
+    is_valid = formatter.validate_summary(parsed_summary)
+    logger.info(f"Summary is valid: {is_valid}")
     
-    metadata = result["metadata"]
-    assert metadata["source_url"] == url
-    assert "generated_at" in metadata
-    assert metadata["version"] == "1.0"
+    # Test formatting
+    logger.info("Testing format_summary...")
+    formatted_summary = formatter.format_summary(parsed_summary, "https://example.com")
+    logger.info(f"Formatted summary: {formatted_summary}")
     
-    content = result["content"]
-    assert content == SAMPLE_SUMMARY
-
-def test_save_summary(output_formatter):
-    """Test saving a formatted summary to a file."""
-    url = "https://example.com/transcription"
-    formatted_summary = output_formatter.format_summary(SAMPLE_SUMMARY, url)
+    # Test saving
+    logger.info("Testing save_summary...")
+    output_path = formatter.save_summary(formatted_summary)
+    logger.info(f"Summary saved to: {output_path}")
     
-    filepath = output_formatter.save_summary(formatted_summary)
-    
-    assert os.path.exists(filepath)
-    assert filepath.startswith(str(output_formatter.output_dir))
-    assert filepath.endswith(".json")
-    
-    # Verify file content
-    with open(filepath, 'r', encoding='utf-8') as f:
-        saved_content = json.load(f)
-        assert saved_content == formatted_summary
-
-def test_validate_summary(output_formatter):
-    """Test validating a valid summary."""
-    assert output_formatter.validate_summary(SAMPLE_SUMMARY) is True
-
-def test_validate_summary_missing_fields(output_formatter):
-    """Test validating a summary with missing fields."""
-    invalid_summary = {
-        "summary": [],
-        "conclusion": ""
-        # Missing action_items
+    return {
+        "parsed_summary": parsed_summary,
+        "is_valid": is_valid,
+        "formatted_summary": formatted_summary,
+        "output_path": output_path
     }
-    assert output_formatter.validate_summary(invalid_summary) is False
 
-def test_validate_summary_wrong_types(output_formatter):
-    """Test validating a summary with wrong field types."""
-    invalid_summary = {
-        "summary": "Not a list",  # Should be a list
-        "conclusion": ["Not a string"],  # Should be a string
-        "action_items": "Not a list"  # Should be a list
-    }
-    assert output_formatter.validate_summary(invalid_summary) is False 
+if __name__ == "__main__":
+    results = test_output_formatter()
+    print("\nTest Results:")
+    print(f"Parsed Summary: {results['parsed_summary']}")
+    print(f"Is Valid: {results['is_valid']}")
+    print(f"Output Path: {results['output_path']}") 

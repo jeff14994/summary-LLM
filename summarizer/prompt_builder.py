@@ -121,14 +121,27 @@ I will generate a structured summary of the meeting:
                 "action_items": []
             }
             
+            # Detect language of the response
+            lang = self._detect_language(response)
+            
             # Split the response into lines and clean them
             lines = [line.strip() for line in response.split('\n') if line.strip()]
             
-            # Find the start of the actual summary points (after the empty line)
+            # Define section headers based on language
+            if lang == "en":
+                summary_header = "summary:"
+                conclusion_header = "conclusion:"
+                action_header = "action items:"
+            else:
+                summary_header = "摘要要點："
+                conclusion_header = "結論："
+                action_header = "行動項目："
+            
+            # Find the start of the actual summary points
             summary_start = 0
             for i, line in enumerate(lines):
-                if line == "3.":  # This marks the end of the Chinese section
-                    summary_start = i + 2  # Skip the empty line after "3."
+                if line.lower().startswith(summary_header.lower()):
+                    summary_start = i + 1
                     break
             
             # Extract summary points from the numbered list
@@ -138,7 +151,7 @@ I will generate a structured summary of the meeting:
                     continue
                 
                 # Skip lines that are clearly not content
-                if line.startswith(("=== Model", "You are", "Please", "IMPORTANT", "Breeze")):
+                if line.startswith(("=== Model", "You are", "Please", "IMPORTANT", "Breeze", "[Meeting Title]", "[Date]", "[Time]", "[Attendees]")):
                     continue
                 
                 # Check if this is a summary point
@@ -147,6 +160,9 @@ I will generate a structured summary of the meeting:
                     cleaned_line = re.sub(r'^\d+\.\s*', '', line)  # Remove numbering
                     if cleaned_line:
                         summary["summary"].append(cleaned_line)
+                # If we hit the next section, stop processing summary points
+                elif line.lower().startswith((conclusion_header.lower(), action_header.lower())):
+                    break
             
             # If we have summary points, use the last one as conclusion
             if summary["summary"]:
