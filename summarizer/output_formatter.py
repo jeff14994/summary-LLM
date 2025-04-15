@@ -116,18 +116,18 @@ class OutputFormatter:
             # Split the text into lines and clean them
             lines = [line.strip() for line in summary_text.split('\n') if line.strip()]
             
-            # Find the start of the actual summary (after any initial messages)
+            # Find the start of the actual summary
             summary_start = 0
             for i, line in enumerate(lines):
-                if line.lower().startswith(('1.', 'summary:', 'the discussion')):
-                    summary_start = i
+                if line.lower().startswith('summary:'):
+                    summary_start = i + 1
                     break
             
             # Extract summary points
             summary_points = []
             for line in lines[summary_start:]:
-                # Skip any lines that are clearly not summary points
-                if line.lower().startswith(('summary:', 'conclusion:', 'action items:')):
+                # Skip empty lines or lines that are clearly not summary points
+                if not line or line.lower().startswith(('conclusion:', 'action items:')):
                     continue
                 
                 # Clean the line and add it as a summary point
