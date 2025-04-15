@@ -77,7 +77,7 @@ def main():
         logger.info("Generating summary...")
         raw_summary = local_llm.generate_summary(prompt)
         print(raw_summary)
-        if not raw_summary:info
+        if not raw_summary:
             logger.error("Failed to generate summary")
             sys.exit(1)
         
