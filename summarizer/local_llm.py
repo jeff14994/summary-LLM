@@ -204,7 +204,7 @@ class LocalLLM:
                 
                 while True:
                     # Check if process is still running
-                    if process.poll() is not None:
+                    if self.current_process.poll() is not None:
                         break
                     
                     # Update progress display at regular intervals
@@ -218,29 +218,29 @@ class LocalLLM:
                     
                     # Check for timeout only if timeout is set
                     if self.timeout > 0 and time.time() - start_time > self.timeout:
-                        process.terminate()
+                        self.current_process.terminate()
                         logger.error(f"LLM generation timed out after {self.timeout} seconds")
                         return None
                     
                     # Read output if available
-                    line = process.stdout.readline()
+                    line = self.current_process.stdout.readline()
                     if line:
                         output.append(line)
                         last_output_time = time.time()
                         logger.debug(f"Model output: {line.strip()}")
                     
                     # Check for errors in stderr
-                    error_line = process.stderr.readline()
+                    error_line = self.current_process.stderr.readline()
                     if error_line:
                         logger.error(f"Model error: {error_line.strip()}")
                     
                     time.sleep(0.1)  # Small delay to prevent high CPU usage
                 
                 # Get final output and error
-                stdout, stderr = process.communicate()
+                stdout, stderr = self.current_process.communicate()
                 output.extend(stdout.splitlines())
                 
-                if process.returncode != 0:
+                if self.current_process.returncode != 0:
                     logger.error(f"LLM generation failed: {stderr}")
                     return None
                 
