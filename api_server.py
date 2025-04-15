@@ -74,29 +74,38 @@ async def summarize(request: SummarizeRequest):
         logs = []
         
         # Initialize LLM
-        logger.info("Initializing LLM...")
-        if not llm.initialize():
-            raise HTTPException(status_code=500, detail="Failed to initialize LLM")
-        logs.append("LLM initialized successfully")
+        # logger.info("Initializing LLM...")
+        # if not llm.initialize():
+        #     raise HTTPException(status_code=500, detail="Failed to initialize LLM")
+        # logs.append("LLM initialized successfully")
         
         # Extract transcription
-        logger.info(f"Fetching transcription from {request.url}...")
-        transcription = html_extractor.process_url(str(request.url))
-        if not transcription:
-            raise HTTPException(status_code=400, detail="Failed to extract transcription")
-        logs.append("Transcription extracted successfully")
+        # logger.info(f"Fetching transcription from {request.url}...")
+        # transcription = html_extractor.process_url(str(request.url))
+        # if not transcription:
+        #     raise HTTPException(status_code=400, detail="Failed to extract transcription")
+        # logs.append("Transcription extracted successfully")
         
         # Build prompt
-        logger.info("Building prompt...")
-        prompt = prompt_builder.build_prompt(transcription)
-        logs.append("Prompt built successfully")
+        # logger.info("Building prompt...")
+        # prompt = prompt_builder.build_prompt(transcription)
+        # logs.append("Prompt built successfully")
         
         # Generate summary
-        logger.info("Generating summary...")
-        raw_summary = llm.generate_summary(prompt)
-        if not raw_summary:
-            raise HTTPException(status_code=500, detail="Failed to generate summary")
-        logs.append("Summary generated successfully")
+        # logger.info("Generating summary...")
+        # raw_summary = llm.generate_summary(prompt)
+        # if not raw_summary:
+        #     raise HTTPException(status_code=500, detail="Failed to generate summary")
+        # logs.append("Summary generated successfully")
+        
+        # Test data
+        raw_summary = """=== Model Output ===
+重要的是，你是一個來自台灣聯發科的人工智慧助理。你的名字是 Breeze，很樂意以台灣人的立場幫助使用者。我可以用繁體中文回答問題，但總結會議記錄時，請用英語撰寫摘要。
+
+Summary:
+1. DeepSeek's recent developments have sparked widespread discussion regarding privacy, data rights, and freedom of speech.
+2. The situation has led to increased awareness and appreciation for open-source software and its potential impact on individual liberties in both analog and digital realms.
+3. The ongoing debate aims to explore how open-source technologies can be designed or adapted to better protect user rights while minimizing potential risks, such as fraud and deepfakes."""
         
         # Parse and validate summary
         logger.info("Parsing summary...")

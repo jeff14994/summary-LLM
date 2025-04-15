@@ -36,7 +36,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 4. Pull the required LLM model:
 ```bash
-ollama pull jcai/breeze-7b-32k-instruct-v1_0:f16
+ollama pull jcai/breeze-7b-32k-instruct-v1_0:q4_0
 ```
 
 ## Usage
