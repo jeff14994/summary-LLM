@@ -109,9 +109,8 @@ Summary:
         
         # Parse and validate summary
         logger.info("Parsing summary...")
-        summary = prompt_builder.parse_llm_response(raw_summary)
-        print(summary)
-        if not output_formatter.validate_summary(summary):
+        # summary = prompt_builder.parse_llm_response(raw_summary)
+        if not output_formatter.validate_summary(raw_summary):
             logger.error(f"Invalid summary format: {summary}")
             raise HTTPException(status_code=500, detail="Invalid summary format")
         logs.append("Summary parsed and validated successfully")
