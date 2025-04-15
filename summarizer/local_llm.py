@@ -24,6 +24,9 @@ class LocalLLM:
         self.num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "2048"))  # Context window size
         self.num_thread = int(os.getenv("OLLAMA_NUM_THREAD", "4"))  # Number of threads
         self.num_gpu = int(os.getenv("OLLAMA_NUM_GPU", "1"))  # Number of GPU layers
+        # Create output directory
+        self.output_dir = "llm_outputs"
+        os.makedirs(self.output_dir, exist_ok=True)
         
     def _check_ollama_installed(self) -> bool:
         """
@@ -102,9 +105,26 @@ class LocalLLM:
         elapsed = time.time() - start_time
         progress = min(100, int((elapsed / timeout) * 100))
         elapsed_str = datetime.fromtimestamp(elapsed).strftime('%M:%S')
-        status_line = f"Model: {self.model} | Status: {status} | Time: {elapsed_str} | Output: {output_lines} lines | Progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}"
+        status_line = f"Status: {status} | Time: {elapsed_str} | Output: {output_lines} lines | Progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}"
         sys.stdout.write(f"\r{status_line}")
         sys.stdout.flush()
+        
+    def _save_output(self, prompt: str, summary: str, output_file: str):
+        """Save the model output to a file."""
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write("=== Model Configuration ===\n")
+            f.write(f"Model: {self.model}\n")
+            f.write(f"Timeout: {self.timeout} seconds\n")
+            f.write(f"Context window: {self.num_ctx}\n")
+            f.write(f"Threads: {self.num_thread}\n")
+            f.write(f"GPU layers: {self.num_gpu}\n\n")
+            
+            f.write("=== Test Prompt ===\n")
+            f.write(prompt)
+            f.write("\n\n")
+            
+            f.write("=== Model Output ===\n")
+            f.write(summary)
         
     def generate_summary(self, prompt: str) -> Optional[str]:
         """
@@ -119,6 +139,11 @@ class LocalLLM:
         try:
             logger.info("Generating summary with local LLM...")
             start_time = time.time()
+            
+            # Generate timestamp for filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = os.path.join(self.output_dir, f"llm_output_{timestamp}.txt")
+            logger.info(f"Output will be saved to: {output_file}")
             
             # Create a temporary file for the prompt
             import tempfile
@@ -207,6 +232,11 @@ class LocalLLM:
                 
                 print()  # New line after progress bar
                 logger.info("Inference completed successfully")
+                
+                # Save output to file
+                self._save_output(prompt, final_output, output_file)
+                logger.info(f"Output saved to: {output_file}")
+                
                 logger.debug(f"Final output: {final_output[:200]}...")  # Log first 200 chars
                 return final_output
                 
