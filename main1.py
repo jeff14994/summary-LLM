@@ -77,12 +77,12 @@ def main():
         logger.info("Generating summary...")
         raw_summary = local_llm.generate_summary(prompt)
         print(raw_summary)
-        if not raw_summary:
+        if not raw_summary:info
             logger.error("Failed to generate summary")
             sys.exit(1)
         
         # Parse and validate summary
-        logger.info("Parsing summary...")
+        logger.("Parsing summary...")
         summary = prompt_builder.parse_llm_response(raw_summary)
         print(summary)
         if not output_formatter.validate_summary(summary):

@@ -10,6 +10,7 @@ from typing import Dict, Any
 from datetime import datetime
 from loguru import logger
 from dotenv import load_dotenv
+import re
 
 class OutputFormatter:
     def __init__(self):
@@ -93,3 +94,57 @@ class OutputFormatter:
             return False
             
         return True 
+
+    def parse_summary(self, summary_text: str) -> Dict[str, Any]:
+        """
+        Parse the raw summary text into a structured format.
+        
+        Args:
+            summary_text (str): The raw summary text from the LLM
+            
+        Returns:
+            Dict[str, Any]: Structured summary data
+        """
+        try:
+            # Initialize the result structure
+            result = {
+                "summary": [],
+                "conclusion": "",
+                "action_items": []
+            }
+            
+            # Split the text into lines and clean them
+            lines = [line.strip() for line in summary_text.split('\n') if line.strip()]
+            
+            # Find the start of the actual summary (after any initial messages)
+            summary_start = 0
+            for i, line in enumerate(lines):
+                if line.lower().startswith(('1.', 'summary:', 'the discussion')):
+                    summary_start = i
+                    break
+            
+            # Extract summary points
+            summary_points = []
+            for line in lines[summary_start:]:
+                # Skip any lines that are clearly not summary points
+                if line.lower().startswith(('summary:', 'conclusion:', 'action items:')):
+                    continue
+                
+                # Clean the line and add it as a summary point
+                line = re.sub(r'^\d+\.\s*', '', line)  # Remove numbering
+                line = line.strip()
+                if line:
+                    summary_points.append(line)
+            
+            # Update the result
+            result["summary"] = summary_points
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to parse summary: {str(e)}")
+            return {
+                "summary": [],
+                "conclusion": "",
+                "action_items": []
+            } 

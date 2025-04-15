@@ -209,8 +209,14 @@ class LocalLLM:
 
 {chunk}
 
-Please provide a concise summary of this section. Focus on the key points and main ideas."""
-        
+Please provide a concise summary of this section. Focus on the key points and main ideas.
+IMPORTANT: 
+1. Use only English for the summary
+2. Format the output as a clean, numbered list
+3. Each point should be a complete sentence
+4. Avoid any special characters or formatting markers
+5. Keep the summary focused and concise"""
+
         summary = self._generate_with_prompt(prompt)
         return (chunk_index, summary)
         
@@ -311,14 +317,19 @@ Please provide a concise summary of this section. Focus on the key points and ma
                 for future in as_completed(future_to_chunk):
                     chunk_index, summary = future.result()
                     if summary:
+                        # Clean up the summary
+                        summary = summary.strip()
+                        # Remove any special characters or formatting markers
+                        summary = re.sub(r'<\|.*?\|>', '', summary)
                         summaries[chunk_index] = summary
                         logger.info(f"Completed chunk {chunk_index + 1}/{len(chunks)}")
                     else:
                         logger.error(f"Failed to process chunk {chunk_index + 1}")
                         return None
             
-            # Combine summaries
-            final_summary = "\n\n".join(summaries)
+            # Combine summaries and clean up
+            final_summary = "\n\n".join(filter(None, summaries))
+            final_summary = re.sub(r'\n{3,}', '\n\n', final_summary)  # Remove excessive newlines
             
             # Save output to file
             self._save_output(prompt, final_summary, output_file)
