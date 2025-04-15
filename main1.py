@@ -82,7 +82,7 @@ def main():
             sys.exit(1)
         
         # Parse and validate summary
-        logger.("Parsing summary...")
+        logger.info("Parsing summary...")
         summary = prompt_builder.parse_llm_response(raw_summary)
         print(summary)
         if not output_formatter.validate_summary(summary):
