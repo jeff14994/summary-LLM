@@ -10,6 +10,8 @@ from typing import Optional, Dict, Any
 from loguru import logger
 import os
 from dotenv import load_dotenv
+import time
+import sys
 
 class LocalLLM:
     def __init__(self):
@@ -94,6 +96,13 @@ class LocalLLM:
                 
         return True
         
+    def _print_progress(self, start_time: float, timeout: int):
+        """Print a progress indicator for the inference process."""
+        elapsed = time.time() - start_time
+        progress = min(100, int((elapsed / timeout) * 100))
+        sys.stdout.write(f"\rInference progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}")
+        sys.stdout.flush()
+        
     def generate_summary(self, prompt: str) -> Optional[str]:
         """
         Generate a summary using the local LLM.
@@ -106,6 +115,7 @@ class LocalLLM:
         """
         try:
             logger.info("Generating summary with local LLM...")
+            start_time = time.time()
             
             # Create a temporary file for the prompt
             import tempfile
@@ -125,34 +135,62 @@ class LocalLLM:
                 
                 logger.debug(f"Running command: {cmd}")
                 
-                # Run the command with timeout
-                result = subprocess.run(
+                # Start the process
+                process = subprocess.Popen(
                     cmd,
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    timeout=self.timeout,
                     shell=True,
                     env=dict(os.environ, OLLAMA_NUM_CTX="1024", OLLAMA_NUM_THREAD="8", OLLAMA_NUM_GPU="1")
                 )
                 
-                if result.returncode != 0:
-                    logger.error(f"LLM generation failed: {result.stderr}")
-                    return None
+                # Monitor the process and show progress
+                output = []
+                while True:
+                    # Check if process is still running
+                    if process.poll() is not None:
+                        break
                     
-                if not result.stdout.strip():
+                    # Print progress
+                    self._print_progress(start_time, self.timeout)
+                    
+                    # Check for timeout
+                    if time.time() - start_time > self.timeout:
+                        process.terminate()
+                        logger.error(f"LLM generation timed out after {self.timeout} seconds")
+                        return None
+                    
+                    # Read output if available
+                    line = process.stdout.readline()
+                    if line:
+                        output.append(line)
+                        logger.debug(f"Model output: {line.strip()}")
+                    
+                    time.sleep(0.1)  # Small delay to prevent high CPU usage
+                
+                # Get final output and error
+                stdout, stderr = process.communicate()
+                output.extend(stdout.splitlines())
+                
+                if process.returncode != 0:
+                    logger.error(f"LLM generation failed: {stderr}")
+                    return None
+                
+                final_output = ''.join(output)
+                if not final_output.strip():
                     logger.error("LLM returned empty output")
                     return None
-                    
-                logger.debug(f"LLM output: {result.stdout[:200]}...")  # Log first 200 chars
-                return result.stdout
+                
+                print()  # New line after progress bar
+                logger.info("Inference completed successfully")
+                logger.debug(f"Final output: {final_output[:200]}...")  # Log first 200 chars
+                return final_output
                 
             finally:
                 # Clean up the temporary file
                 os.unlink(temp_file_path)
                 
-        except subprocess.TimeoutExpired:
-            logger.error(f"LLM generation timed out after {self.timeout} seconds")
-            return None
         except Exception as e:
             logger.error(f"Failed to generate summary: {str(e)}")
             return None 
