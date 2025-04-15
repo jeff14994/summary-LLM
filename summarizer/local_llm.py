@@ -19,7 +19,7 @@ class LocalLLM:
         load_dotenv()
         # Use the full model name including quantization suffix
         self.model = os.getenv("OLLAMA_MODEL", "jcai/breeze-7b-32k-instruct-v1_0:q4_0")
-        self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "300"))
+        self.timeout = int(os.getenv("OLLAMA_TIMEOUT", "0"))  # 0 means no timeout
         # Add parameters for faster inference
         self.num_ctx = int(os.getenv("OLLAMA_NUM_CTX", "2048"))  # Context window size
         self.num_thread = int(os.getenv("OLLAMA_NUM_THREAD", "4"))  # Number of threads
@@ -27,6 +27,9 @@ class LocalLLM:
         # Create output directory
         self.output_dir = "llm_outputs"
         os.makedirs(self.output_dir, exist_ok=True)
+        # Process tracking
+        self.current_process = None
+        self.is_running = False
         
     def _check_ollama_installed(self) -> bool:
         """
@@ -103,9 +106,13 @@ class LocalLLM:
     def _print_progress(self, start_time: float, timeout: int, output_lines: int = 0, status: str = "Running"):
         """Print a progress indicator for the inference process."""
         elapsed = time.time() - start_time
-        progress = min(100, int((elapsed / timeout) * 100))
+        if timeout > 0:
+            progress = min(100, int((elapsed / timeout) * 100))
+            progress_str = f"[{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}"
+        else:
+            progress_str = "[No timeout]"
         elapsed_str = datetime.fromtimestamp(elapsed).strftime('%M:%S')
-        status_line = f"Status: {status} | Time: {elapsed_str} | Output: {output_lines} lines | Progress: [{progress}%] {'=' * (progress//2)}{' ' * (50-progress//2)}"
+        status_line = f"Status: {status} | Time: {elapsed_str} | Output: {output_lines} lines | Progress: {progress_str}"
         sys.stdout.write(f"\r{status_line}")
         sys.stdout.flush()
         
@@ -125,6 +132,17 @@ class LocalLLM:
             
             f.write("=== Model Output ===\n")
             f.write(summary)
+            
+    def cancel_generation(self):
+        """Cancel the current generation process if it's running."""
+        if self.is_running and self.current_process:
+            logger.info("Cancelling current generation...")
+            self.current_process.terminate()
+            self.is_running = False
+            self.current_process = None
+            logger.info("Generation cancelled")
+        else:
+            logger.info("No generation process is currently running")
         
     def generate_summary(self, prompt: str) -> Optional[str]:
         """
@@ -164,7 +182,7 @@ class LocalLLM:
                 logger.debug(f"Running command: {cmd}")
                 
                 # Start the process
-                process = subprocess.Popen(
+                self.current_process = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
@@ -175,6 +193,7 @@ class LocalLLM:
                             OLLAMA_NUM_THREAD=str(self.num_thread),
                             OLLAMA_NUM_GPU=str(self.num_gpu))
                 )
+                self.is_running = True
                 
                 # Monitor the process and show progress
                 output = []
@@ -197,8 +216,8 @@ class LocalLLM:
                         self._print_progress(start_time, self.timeout, len(output), status)
                         last_update = current_time
                     
-                    # Check for timeout
-                    if time.time() - start_time > self.timeout:
+                    # Check for timeout only if timeout is set
+                    if self.timeout > 0 and time.time() - start_time > self.timeout:
                         process.terminate()
                         logger.error(f"LLM generation timed out after {self.timeout} seconds")
                         return None
@@ -243,6 +262,8 @@ class LocalLLM:
             finally:
                 # Clean up the temporary file
                 os.unlink(temp_file_path)
+                self.is_running = False
+                self.current_process = None
                 
         except Exception as e:
             logger.error(f"Failed to generate summary: {str(e)}")
