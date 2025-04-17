@@ -26,15 +26,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Ollama runtime
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
-# Start Ollama service in the background
-RUN nohup ollama &
-
-# Wait for the Ollama service to start, then pull the model
-RUN sleep 10 && ollama pull jcai/breeze-7b-32k-instruct-v1_0:q4_0
-
 # Expose port for the API server
 EXPOSE 8000
 
-# Define the command to run the API server when the container starts
-CMD ["python3", "api_server.py"]
+# Entry point script to start Ollama and pull the model when the container starts
+CMD ["bash", "-c", "ollama & sleep 10 && ollama pull jcai/breeze-7b-32k-instruct-v1_0:q4_0 && python3 api_server.py"]
 
