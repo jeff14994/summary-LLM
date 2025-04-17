@@ -30,5 +30,5 @@ RUN curl -fsSL https://ollama.com/install.sh | sh
 EXPOSE 8000
 
 # Entry point script to start Ollama and pull the model when the container starts
-CMD ["bash", "-c", "ollama & sleep 10 && ollama pull jcai/breeze-7b-32k-instruct-v1_0:q4_0 && python3 api_server.py"]
+CMD ["bash", "-c", "ollama serve & sleep 10 && ollama pull jcai/breeze-7b-32k-instruct-v1_0:q4_0 && python3 api_server.py"]
 
