@@ -2,6 +2,7 @@
 
 A Python-based system for summarizing HTML transcription content using local LLM inference.
 
+[The Doc of implementation](https://github.com/jeff14994/summary-LLM/blob/main/REPORT.MD)
 ## Features
 
 - Fetches and parses HTML transcription content from SayIt archive
