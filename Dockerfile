@@ -26,8 +26,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install Ollama runtime
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull the required LLM model
-RUN ollama pull jcai/breeze-7b-32k-instruct-v1_0:q4_0
+# Start Ollama service in the background
+RUN nohup ollama &
+
+# Wait for the Ollama service to start, then pull the model
+RUN sleep 10 && ollama pull jcai/breeze-7b-32k-instruct-v1_0:q4_0
 
 # Expose port for the API server
 EXPOSE 8000
