@@ -36,7 +36,7 @@ flowchart TD
 
     %% Configuration node
     O[".env Configuration"]:::config
-    O --- D
+    O --- F
 
     %% External dependency: Ollama Runtime
     R["Ollama Runtime"]:::external
